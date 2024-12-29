@@ -1,0 +1,50 @@
+import requests
+import pandas as pd
+from datetime import datetime, timedelta
+import os
+
+def to_csv(df,csv_name):
+    path=f"C:/Users/33603/Desktop/BinanceBot_Project/{csv_name}.csv"
+    df.to_csv(path, mode='a', header=not os.path.exists(path), index=False)
+    
+def extract_klines(symbol, interval, start, end):
+    API_KEY= " "
+    url = "https://api.binance.com/api/v3/klines"
+    params = {
+        'symbol': symbol,
+        'interval': interval,
+        'startTime': int(start.timestamp() * 1000),
+        'endTime': int(end.timestamp() * 1000)
+    }
+    headers = {'X-MBX-APIKEY': API_KEY}
+    response = requests.get(url, params=params,headers=headers)
+    if response.status_code == 200:
+        column_names = [
+            'Kline_open_time', 'Open_price', 'High_price', 'Low_price', 'Close_price', 'Volume', 
+            'Kline_Close_time', 'Quote_Asset_Volume', 'Number_of_Trades', 
+            'Taker_Buy_Base_Asset_Volume', 'Taker_Buy_Quote_Asset_Volume', 'Ignore'
+        ]
+        df=pd.DataFrame(response.json(),columns=column_names)
+        return df
+    else:
+        return None
+
+
+def apply_extract_klines(symbol,end_date):
+    interval = '1h'
+    start_date = end_date - timedelta(days=15)
+    data = extract_klines(symbol, interval, start_date, end_date)
+    data = data.drop('Ignore', axis=1)
+    data["Symboles"]=symbol
+    columns_new_order= [
+         'Symboles','Kline_open_time', 'Open_price', 'High_price', 'Low_price', 'Close_price', 'Volume', 
+        'Kline_Close_time', 'Quote_Asset_Volume', 'Number_of_Trades', 
+        'Taker_Buy_Base_Asset_Volume', 'Taker_Buy_Quote_Asset_Volume'
+    ]
+    data=data[columns_new_order]
+    to_csv(data,"klines")
+
+symbols=symbols=["BTCFDUSD","BTCUSDT","ETHFDUSD","USDCUSDT","ETHUSDT","SOLUSDT","FDUSDUSDT","PEPEUSDT","SOLFDUSD","WIFUSDT"]
+end_date = datetime.now()
+for s in symbols:
+    apply_extract_klines(s,end_date)
